@@ -1,0 +1,29 @@
+/* Canvas stays behind HTML modal */
+.webgl-canvas {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  z-index: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Wrapper prevents canvas from blocking modal clicks */
+.canvas-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none !important; /* IMPORTANT */
+}
+
+/* Modal sits ABOVE canvas */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.modal-box {
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}

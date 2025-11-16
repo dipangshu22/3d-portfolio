@@ -1,0 +1,130 @@
+/* Glass Navbar */
+.navbar {
+  position: fixed;
+  height: 20px;
+  top: 0;
+  width: 100%;
+  padding: 22px 0;
+  display: flex;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  background: rgba(10, 10, 10, 0.45);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  z-index: 1000;
+}
+
+.nav-container {
+  max-width: 1200px;
+  padding: 0 20px;
+  position: relative;
+}
+
+/* Wrapper allowing particles behind the text */
+.particle-wrapper {
+max-width: 500px;
+  position: relative;
+  display: inline-block;
+  height: 60px;
+}
+
+/* Animated Text (floating + fade loop + typing) */
+.animated-text {
+  font-family: "Poppins", "Inter", "Segoe UI", sans-serif;
+  font-size: 1.7rem;
+  font-weight: 600;
+  letter-spacing: 1.6px;
+
+  background: linear-gradient(90deg, #0c4983, #070808);
+  -webkit-background-clip: text;
+  color: white;
+
+  white-space: nowrap;
+  overflow: hidden;
+
+  border-right: 3px solid rgba(77,169,255,0.75);
+  width: 0;
+
+  text-shadow: 
+    0 0 14px rgba(77,169,255,0.5),
+    0 0 30px rgba(77,169,255,0.25);
+
+  animation:
+    typing 3s steps(40, end) forwards,
+    cursorBlink 0.8s infinite,
+    float 4s ease-in-out infinite,
+    fadePulse 3s ease-in-out infinite;
+}
+
+/* Typing cursor */
+@keyframes typing {
+  from { width: 0; }
+  to { width: 520px; }
+}
+@keyframes cursorBlink {
+  0%, 100% { border-color: transparent; }
+  50% { border-color: rgba(77,169,255,1); }
+}
+
+/* Floating */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Fade pulsing */
+@keyframes fadePulse {
+  0% { opacity: 0.9; }
+  50% { opacity: 0.5; }
+  100% { opacity: 0.9; }
+}
+
+
+
+/* ------------------------------- */
+/* PARTICLE SPARKLES AROUND TEXT   */
+/* ------------------------------- */
+
+.particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particles::before,
+.particles::after {
+  content: "";
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  width: 160%;
+  height: 160%;
+  background: url("data:image/svg+xml,\
+    <svg xmlns='http://www.w3.org/2000/svg' width='4' height='4' fill='white'>\
+      <circle cx='2' cy='2' r='2' />\
+    </svg>") repeat;
+
+  opacity: 0.6;
+  filter: blur(1px);
+  animation: drift 18s linear infinite;
+}
+
+.particles::after {
+  filter: blur(3px);
+  opacity: 0.35;
+  animation-duration: 28s;
+}
+
+/* Sparkles drifting motion */
+@keyframes drift {
+  0% { transform: translate(0px, 0px) scale(1); }
+  50% { transform: translate(-25px, -15px) scale(1.2); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+body.showing-welcome .navbar {
+  pointer-events: none;
+  opacity: 0;    /* optional: hide navbar */
+  transform: translateY(-20px); /* optional: slide up */
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}

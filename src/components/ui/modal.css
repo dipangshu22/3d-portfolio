@@ -1,0 +1,188 @@
+/* Modern frosted overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: auto;
+  height: auto;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  background: transparent;
+}
+
+/* Smooth entrance animation */
+@keyframes modalFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Modal box with modern style */
+.modal-box {
+  position: fixed;
+  top: 80px;
+  left: 20px;
+
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+
+  padding: 22px;
+  width: 320px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 8px 32px rgba(0, 0, 0, 0.12);
+
+  animation: modalFadeIn 0.3s ease;
+  z-index: 10000 !important;
+  pointer-events: auto !important;
+}
+
+/* Title */
+.modal-box h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #111;
+}
+
+/* Body text */
+.modal-box p,
+.modal-box div {
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #333;
+}
+
+/* Close button - modern style */
+.close-btn {
+  margin-top: 18px;
+  width: 100%;
+  padding: 12px 16px;
+
+  border: none;
+  border-radius: 12px;
+
+  background: linear-gradient(135deg, #ff4470, #ff2255);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+/* Hover effect */
+.close-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+/* Pressing effect */
+.close-btn:active {
+  transform: translateY(0);
+  opacity: 0.85;
+}
+/* ================================
+   Modern Buttons (Reusable)
+   ================================ */
+
+/* Primary button (pink gradient) */
+.btn-primary {
+  width: 100%;
+  padding: 12px 16px;
+  margin-top: 14px;
+  border: none;
+  border-radius: 12px;
+
+  background: linear-gradient(135deg, #ff4d7a, #ff295e);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+
+  transition: transform 0.15s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+  box-shadow: 0 4px 15px rgba(255, 50, 90, 0.3);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  opacity: 0.85;
+}
+
+/* Secondary button (soft gray) */
+.btn-secondary {
+  width: 100%;
+  padding: 12px 16px;
+  margin-top: 12px;
+  border: none;
+  border-radius: 12px;
+
+  background: rgba(255, 255, 255, 0.35);
+  backdrop-filter: blur(12px);
+  color: #333;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.btn-secondary:active {
+  transform: translateY(0);
+  opacity: 0.85;
+}
+
+/* Icon button (round, floating) */
+.btn-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.5);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  font-size: 20px;
+
+  transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+.btn-icon:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.btn-icon:active {
+  transform: translateY(0);
+  opacity: 0.85;
+}

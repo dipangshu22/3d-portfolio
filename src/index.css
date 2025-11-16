@@ -1,0 +1,38 @@
+/* Canvas behind modal */
+canvas.webgl-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1 !important;
+  pointer-events: auto; /* canvas can receive raycast clicks */
+}
+body{
+  padding: 0;
+  margin: 0;
+}
+
+/* Wrapper prevents canvas from blocking modal */
+.canvas-wrapper {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none !important; /* very important */
+  background: #0a0a0a;
+}
+
+/* Modal ALWAYS receives clicks */
+.modal-overlay,
+.modal-box {
+  z-index: 99999 !important;
+  pointer-events: auto !important;
+}
+
+.scene-fade-in {
+  animation: sceneFade 0.9s ease forwards;
+  opacity: 0;
+}
+
+@keyframes sceneFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
