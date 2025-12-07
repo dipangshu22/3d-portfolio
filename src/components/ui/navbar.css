@@ -14,7 +14,7 @@
 }
 
 .nav-container {
-  max-width: 1200px;
+  max-width: 1400px;
   padding: 0 20px;
   position: relative;
 }
@@ -58,7 +58,7 @@ max-width: 500px;
 /* Typing cursor */
 @keyframes typing {
   from { width: 0; }
-  to { width: 520px; }
+  to { width: 570px; }
 }
 @keyframes cursorBlink {
   0%, 100% { border-color: transparent; }

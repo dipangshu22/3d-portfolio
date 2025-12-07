@@ -7,7 +7,7 @@ export default function Navbar() {
         <div className="particle-wrapper">
           <div className="particles"></div>
           <h2 className="animated-text">
-            Hello, welcome! I am Dipangshu, WebDev
+            Hello, welcome! I am Dipangshu ,webdev
           </h2>
         </div>
       </div>

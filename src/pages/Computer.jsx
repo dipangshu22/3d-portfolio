@@ -1,37 +1,32 @@
 import React, { useEffect, useRef, useState } from "react";
 import "./computer.css";
 
-/* =============================
-   BIOS BEEP SOUND GENERATOR
-============================= */
-function playBeepSequence(ctx, sequence = [{ f: 800, d: 120 }]) {
+/* -------------------------
+   Beep player (safe)
+------------------------- */
+function playBeep(ctx, freq = 660, dur = 120) {
   if (!ctx) return;
-  let t = ctx.currentTime;
-  sequence.forEach((s) => {
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.frequency.value = s.f;
-    o.type = s.type || "sine";
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.12, t + 0.01);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + s.d / 1000 - 0.01);
-    o.connect(g);
-    g.connect(ctx.destination);
-    o.start(t);
-    o.stop(t + s.d / 1000);
-    t += (s.d + (s.pause || 80)) / 1000;
-  });
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.value = freq;
+  g.gain.setValueAtTime(0.0001, ctx.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.01);
+  o.connect(g);
+  g.connect(ctx.destination);
+  o.start();
+  o.stop(ctx.currentTime + dur / 1000);
 }
 
-/* =============================
-   BOOT SCREEN
-============================= */
+/* -------------------------
+   Boot Screen (unchanged-ish)
+------------------------- */
 function BootScreen({ onFinished }) {
+  const [lines, setLines] = useState([]);
   const [phase, setPhase] = useState(0);
-  const [typedLines, setTypedLines] = useState([]);
   const [progress, setProgress] = useState(0);
 
-  const biosLines = [
+  const bios = [
     "AMI BIOS v2.14",
     "CPU: Intel(R) Core(TM) i7-9750H @ 2.60GHz",
     "RAM: 16384MB OK",
@@ -44,86 +39,79 @@ function BootScreen({ onFinished }) {
     const ctx = AudioCtx ? new AudioCtx() : null;
 
     let idx = 0;
-    const typing = setInterval(() => {
-      if (idx < biosLines.length) {
-        setTypedLines((p) => [...p, biosLines[idx]]);
-        if (ctx) {
-          const freq = 600 + idx * 120;
-          playBeepSequence(ctx, [{ f: freq, d: 140 }, { f: freq + 60, d: 100 }]);
-        }
+    const id = setInterval(() => {
+      if (idx < bios.length) {
+        setLines((p) => [...p, bios[idx]]);
+        if (ctx) playBeep(ctx, 600 + idx * 100, 120);
         idx++;
       } else {
-        clearInterval(typing);
-        setTimeout(() => setPhase(1), 450);
+        clearInterval(id);
+        setTimeout(() => setPhase(1), 400);
       }
-    }, 600);
+    }, 550);
+
+    return () => clearInterval(id);
   }, []);
 
   useEffect(() => {
-    if (phase === 1) {
-      let p = 0;
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      const ctx = AudioCtx ? new AudioCtx() : null;
+    if (phase !== 1) return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    const ctx = AudioCtx ? new AudioCtx() : null;
 
-      const interval = setInterval(() => {
-        p += Math.floor(Math.random() * 8) + 3;
-        if (p >= 100) {
-          p = 100;
-          clearInterval(interval);
-          setProgress(100);
+    let p = 0;
+    const id = setInterval(() => {
+      p += Math.floor(Math.random() * 8) + 4;
+      if (p >= 100) {
+        p = 100;
+        clearInterval(id);
+        setProgress(100);
+        if (ctx) playBeep(ctx, 1000, 180);
+        setTimeout(() => {
           setPhase(2);
-          if (ctx) playBeepSequence(ctx, [{ f: 1000, d: 200 }]);
-          setTimeout(() => onFinished(), 1200);
-        } else {
-          setProgress(p);
-          if (ctx) playBeepSequence(ctx, [{ f: 880 + Math.random() * 120, d: 60 }]);
-        }
-      }, 150);
-    }
-  }, [phase]);
+          setTimeout(() => onFinished(), 900);
+        }, 300);
+      } else {
+        setProgress(p);
+        if (ctx) playBeep(ctx, 820, 70);
+      }
+    }, 140);
+
+    return () => clearInterval(id);
+  }, [phase, onFinished]);
 
   return (
     <div className="boot-screen">
-      <div className="boot-center">
-        <div className="bios-box">
-          {typedLines.map((line, i) => (
-            <div key={i} className="bios-line">
-              <span className="bios-prompt">[POST]</span> {line}
+      <div className="boot-card">
+        <div className="boot-lines">
+          {lines.map((l, i) => (
+            <div key={i} className="boot-line">
+              <span className="boot-tag">[POST]</span> {l}
             </div>
           ))}
-
-          {phase >= 1 && (
-            <div className="progress-wrap">
-              <div className="progress-bar">
-                <div className="progress-fill" style={{ width: `${progress}%` }}></div>
-              </div>
-              <div className="progress-label">Loading OS modules... {progress}%</div>
-            </div>
-          )}
-
-          {phase === 2 && (
-            <div className="terminal">
-              <div>&gt; initializing services...</div>
-              <div>&gt; mounting virtual fs...</div>
-              <div>&gt; starting window manager...</div>
-              <div>&gt; welcome! launching desktop...</div>
-            </div>
-          )}
         </div>
+
+        {phase >= 1 && (
+          <>
+            <div className="boot-progress">
+              <div className="boot-progress-fill" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="boot-status">Loading OS modules… {progress}%</div>
+          </>
+        )}
+
+        {phase === 2 && <div className="boot-ready">> Welcome — launching desktop...</div>}
       </div>
-      <div className="boot-footer">Press ESC for boot options (simulated)</div>
     </div>
   );
 }
 
-/* =============================
-   DRAGGABLE WINDOWS HOOK
-============================= */
+/* -------------------------
+   Draggable hook
+------------------------- */
 function useDraggable(ref, onFocus) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-
     const bar = el.querySelector(".window-title-bar");
     if (!bar) return;
 
@@ -131,352 +119,399 @@ function useDraggable(ref, onFocus) {
     let offsetY = 0;
     let dragging = false;
 
-    const pointerDown = (e) => {
-      if (e.button !== 0) return;
-      dragging = true;
-      onFocus?.();
-
-      const rect = el.getBoundingClientRect();
-      offsetX = e.clientX - rect.left;
-      offsetY = e.clientY - rect.top;
-
-      document.addEventListener("pointermove", pointerMove);
-      document.addEventListener("pointerup", pointerUp);
-    };
-
-    const pointerMove = (e) => {
+    const onMove = (e) => {
       if (!dragging) return;
       el.style.left = e.clientX - offsetX + "px";
       el.style.top = e.clientY - offsetY + "px";
     };
 
-    const pointerUp = () => {
+    const onUp = () => {
       dragging = false;
-      document.removeEventListener("pointermove", pointerMove);
-      document.removeEventListener("pointerup", pointerUp);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
     };
 
-    bar.addEventListener("pointerdown", pointerDown);
+    const onDown = (e) => {
+      if (e.button !== 0) return;
+      dragging = true;
+      onFocus?.();
+      const r = el.getBoundingClientRect();
+      offsetX = e.clientX - r.left;
+      offsetY = e.clientY - r.top;
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+    };
 
+    bar.addEventListener("pointerdown", onDown);
     return () => {
-      bar.removeEventListener("pointerdown", pointerDown);
+      bar.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
     };
-  }, [ref]);
+  }, [ref, onFocus]);
 }
 
-/* =============================
-   MAIN OS DESKTOP
-============================= */
+/* -------------------------
+   Terminal engine (simple)
+------------------------- */
+function runCommand(cmd, state) {
+  const parts = cmd.trim().split(/\s+/);
+  const main = parts[0]?.toLowerCase() || "";
+  const arg = parts.slice(1).join(" ");
 
+  const push = (s, msg) => {
+    s.logs.push(msg);
+  };
+
+  switch (main) {
+    case "":
+      break;
+    case "help":
+      push(state, "Commands: help, ls, open <name>, rm <name>, restore <name>, emptybin, clear, echo <text>, date");
+      break;
+    case "ls":
+      if (state.files.length === 0) push(state, "(no files)");
+      state.files.forEach((f) => push(state, "- " + f.name));
+      break;
+    case "open":
+      if (!arg) push(state, "open: missing target");
+      else {
+        const exists = state.files.some((f) => f.name === arg);
+        push(state, exists ? `Opening ${arg} (simulated)` : `open: ${arg}: no such file`);
+      }
+      break;
+    case "rm":
+      if (!arg) push(state, "rm: missing file");
+      else {
+        const file = state.files.find((f) => f.name === arg);
+        if (!file) push(state, `rm: ${arg}: no such file`);
+        else {
+          state.files = state.files.filter((f) => f.name !== arg);
+          state.recycle.unshift({ ...file, deletedAt: Date.now() });
+          push(state, `${arg} moved to recycle`);
+        }
+      }
+      break;
+    case "restore":
+      if (!arg) push(state, "restore: missing file");
+      else {
+        const item = state.recycle.find((r) => r.name === arg);
+        if (!item) push(state, `restore: ${arg}: not in recycle`);
+        else {
+          state.recycle = state.recycle.filter((r) => r.name !== arg);
+          state.files.unshift(item);
+          push(state, `Restored ${arg}`);
+        }
+      }
+      break;
+    case "emptybin":
+      state.recycle = [];
+      push(state, "Recycle bin emptied");
+      break;
+    case "clear":
+      state.logs = [];
+      break;
+    case "echo":
+      push(state, arg);
+      break;
+    case "date":
+      push(state, new Date().toString());
+      break;
+    default:
+      push(state, `Unknown command: ${main}`);
+  }
+
+  return state;
+}
+
+/* -------------------------
+   Main Component
+------------------------- */
 export default function Computer() {
   const [booted, setBooted] = useState(false);
   const [showDesktop, setShowDesktop] = useState(false);
 
-  /* Z-index for window focus */
-  const [z, setZ] = useState(50);
-  const bringToFront = (ref) => {
-    setZ((p) => p + 1);
-    if (ref?.current) ref.current.style.zIndex = z + 1;
-  };
+  // z-index management
+  const [z, setZ] = useState(1000);
+  const bringToFront = (ref) =>
+    setZ((prev) => {
+      const next = prev + 1;
+      if (ref?.current) ref.current.style.zIndex = next;
+      return next;
+    });
 
-  /* Windows tracking */
-  const [openWindows, setOpenWindows] = useState([]); 
+  // windows state
+  const [openWindows, setOpenWindows] = useState([]);
   const [minimized, setMinimized] = useState([]);
   const [maximized, setMaximized] = useState([]);
 
-  /* Fake FileSystem */
-  const initialFiles = [
+  // fake fs
+  const [files, setFiles] = useState([
     { id: 1, name: "project1.zip", size: "4.2MB" },
     { id: 2, name: "design.sketch", size: "2.6MB" },
     { id: 3, name: "notes.txt", size: "8KB" },
-  ];
-  const [files, setFiles] = useState(initialFiles);
+  ]);
   const [recycle, setRecycle] = useState([]);
 
-  /* Terminal state */
-  const [terminalLogs, setTerminalLogs] = useState([
-    "> FakeOS Terminal initialized",
-    "> Type 'help' to list commands",
-  ]);
-  const [terminalInput, setTerminalInput] = useState("");
+  // terminal state
+  const [termLogs, setTermLogs] = useState(["> FakeOS Terminal ready — type 'help'"]);
+  const [termInput, setTermInput] = useState("");
 
-  /* Start menu */
+  // start menu + search
   const [startOpen, setStartOpen] = useState(false);
+  const [startQuery, setStartQuery] = useState("");
 
-  /* Window refs */
+  // fullscreen
+  const [isFull, setIsFull] = useState(false);
+
+  // refs
   const refs = {
     explorer: useRef(null),
     recycle: useRef(null),
     terminal: useRef(null),
   };
 
-  /* -------------------------------
-        FILE OPERATIONS
-  --------------------------------*/
+  // taskbar clock
+  const [timeStr, setTimeStr] = useState(
+    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  );
 
-  const deleteFile = (id) => {
-    const f = files.find((x) => x.id === id);
-    if (!f) return;
-    setFiles((p) => p.filter((x) => x.id !== id));
-    setRecycle((p) => [{ ...f, deletedAt: Date.now() }, ...p]);
-  };
+  useEffect(() => {
+    const id = setInterval(() => {
+      setTimeStr(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
 
-  const restoreFile = (id) => {
-    const item = recycle.find((x) => x.id === id);
-    if (!item) return;
-    setRecycle((p) => p.filter((x) => x.id !== id));
-    setFiles((p) => [item, ...files]);
-  };
+  // keyboard escape closes start menu
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        setStartOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
-  const emptyRecycle = () => setRecycle([]);
+  // draggable
+  useDraggable(refs.explorer, () => bringToFront(refs.explorer));
+  useDraggable(refs.recycle, () => bringToFront(refs.recycle));
+  useDraggable(refs.terminal, () => bringToFront(refs.terminal));
 
-  /* -------------------------------
-        WINDOW CONTROL
-  --------------------------------*/
-
+  // open/close windows
   const openWindow = (name) => {
-    if (!openWindows.includes(name)) {
-      setOpenWindows((p) => [...p, name]);
-    }
-    setMinimized((p) => p.filter((x) => x !== name));
+    if (!openWindows.includes(name)) setOpenWindows((p) => [...p, name]);
+    setMinimized((m) => m.filter((x) => x !== name));
     bringToFront(refs[name]);
     setStartOpen(false);
   };
-
   const closeWindow = (name) => {
     setOpenWindows((p) => p.filter((x) => x !== name));
-    setMinimized((p) => p.filter((x) => x !== name));
-    setMaximized((p) => p.filter((x) => x !== name));
+    setMinimized((m) => m.filter((x) => x !== name));
+    setMaximized((m) => m.filter((x) => x !== name));
   };
-
   const minimizeWindow = (name) => {
     setMinimized((p) => [...p, name]);
   };
-
   const restoreFromTaskbar = (name) => {
     setMinimized((p) => p.filter((x) => x !== name));
     bringToFront(refs[name]);
   };
-
   const toggleMaximize = (name) => {
     const el = refs[name]?.current;
     if (!el) return;
-
     if (!maximized.includes(name)) {
-      el.dataset.prevLeft = el.style.left;
-      el.dataset.prevTop = el.style.top;
-      el.dataset.prevWidth = el.style.width;
-      el.dataset.prevHeight = el.style.height;
-
-      el.classList.add("maximized");
+      // save prev
+      el.dataset.prevLeft = el.style.left || "";
+      el.dataset.prevTop = el.style.top || "";
+      el.dataset.prevWidth = el.style.width || "";
+      el.dataset.prevHeight = el.style.height || "";
+      el.classList.add("maxed");
       setMaximized((p) => [...p, name]);
     } else {
-      el.classList.remove("maximized");
+      el.classList.remove("maxed");
       el.style.left = el.dataset.prevLeft;
       el.style.top = el.dataset.prevTop;
       el.style.width = el.dataset.prevWidth;
       el.style.height = el.dataset.prevHeight;
-
       setMaximized((p) => p.filter((x) => x !== name));
     }
     bringToFront(refs[name]);
   };
 
-  /* -------------------------------
-        TERMINAL COMMAND ENGINE
-  --------------------------------*/
+  // file ops (exposed to UI)
+  const deleteFile = (id) => {
+    const f = files.find((x) => x.id === id);
+    if (!f) return;
+    setFiles((p) => p.filter((x) => x.id !== id));
+    setRecycle((p) => [{ ...f, deletedAt: Date.now() }, ...p]);
+    setTermLogs((t) => [...t, `Deleted ${f.name}`]);
+  };
+  const restoreFile = (id) => {
+    const item = recycle.find((x) => x.id === id);
+    if (!item) return;
+    setRecycle((p) => p.filter((x) => x.id !== id));
+    setFiles((p) => [item, ...p]);
+    setTermLogs((t) => [...t, `Restored ${item.name}`]);
+  };
+  const emptyBin = () => {
+    setRecycle([]);
+    setTermLogs((t) => [...t, "Recycle bin emptied"]);
+  };
 
-  const runTerminalCommand = () => {
-    const cmd = terminalInput.trim();
-    if (!cmd) return;
-    setTerminalInput("");
+  // terminal run
+  const runTerminal = (raw) => {
+    if (!raw.trim()) return;
+    const state = { logs: [...termLogs], files: [...files], recycle: [...recycle] };
+    const newState = runCommand(raw, state);
+    // adopt resulting FS and recycle from engine
+    setFiles(newState.files);
+    setRecycle(newState.recycle);
+    setTermLogs(newState.logs);
+  };
 
-    const parts = cmd.split(" ");
-    const main = parts[0];
-    const arg = parts[1];
-
-    const log = (msg) =>
-      setTerminalLogs((prev) => [...prev, `> ${msg}`]);
-
-    switch (main) {
-      case "help":
-        log("Commands: ls, cd, open, rm, restore, emptybin, clear");
-        break;
-
-      case "ls":
-        files.forEach((f) => log("- " + f.name));
-        break;
-
-      case "cd":
-        if (!arg) log("cd: missing folder");
-        else if (["explorer", "terminal", "recycle"].includes(arg)) {
-          openWindow(arg);
-          log("Opened " + arg);
-        } else {
-          const exists = files.some((f) => f.name === arg);
-          log(exists ? "Accessing " + arg : "cd: no such file");
-        }
-        break;
-
-      case "open":
-        if (!arg) log("open: missing target");
-        else openWindow(arg);
-        break;
-
-      case "rm":
-        if (!arg) log("rm: missing file name");
-        else {
-          const file = files.find((f) => f.name === arg);
-          if (!file) log("rm: no such file");
-          else {
-            deleteFile(file.id);
-            log("Deleted " + arg);
-          }
-        }
-        break;
-
-      case "restore":
-        if (!arg) log("restore: missing file");
-        else {
-          const item = recycle.find((f) => f.name === arg);
-          if (!item) log("restore: not in recycle bin");
-          else {
-            restoreFile(item.id);
-            log("Restored " + arg);
-          }
-        }
-        break;
-
-      case "emptybin":
-        emptyRecycle();
-        log("Recycle Bin emptied");
-        break;
-
-      case "clear":
-        setTerminalLogs([]);
-        break;
-
-      default:
-        log("Unknown command: " + main);
+  // terminal input handler
+  const onTermKey = (e) => {
+    if (e.key === "Enter") {
+      runTerminal(termInput);
+      setTermInput("");
     }
   };
 
-  /* -------------------------------
-        BOOT FINISH
-  --------------------------------*/
-
+  // Boot finish
   const onBootFinished = () => {
     setBooted(true);
-    setTimeout(() => setShowDesktop(true), 250);
+    setTimeout(() => setShowDesktop(true), 220);
   };
 
-  /* -------------------------------
-        DRAG ENABLED
-  --------------------------------*/
-  useDraggable(refs.explorer, () => bringToFront(refs.explorer));
-  useDraggable(refs.recycle, () => bringToFront(refs.recycle));
-  useDraggable(refs.terminal, () => bringToFront(refs.terminal));
-  /* -------------------------------
-        RENDER (finish component)
-  --------------------------------*/
+  // Fullscreen toggle
+  const toggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+        setIsFull(true);
+      } catch (err) {
+        console.warn("Fullscreen request failed", err);
+      }
+    } else {
+      await document.exitFullscreen();
+      setIsFull(false);
+    }
+  };
+
+  // Start menu apps list
+  const apps = [
+    { id: "explorer", title: "File Explorer", icon: "/icons/folder.png" },
+    { id: "terminal", title: "Terminal", icon: "/icons/terminal.png" },
+    { id: "recycle", title: "Recycle Bin", icon: "/icons/recycle.png" },
+  ];
+  const filtered = apps.filter((a) => a.title.toLowerCase().includes(startQuery.toLowerCase()));
+
   return (
-    <div className="desktop-screen">
+    <div className={`desktop ${isFull ? "fullscreen" : ""}`}>
       {!showDesktop && !booted && <BootScreen onFinished={onBootFinished} />}
-      {!showDesktop && booted && (
-        <div className="boot-fade" onAnimationEnd={() => setShowDesktop(true)} />
-      )}
+      {!showDesktop && booted && <div className="boot-fade" onAnimationEnd={() => setShowDesktop(true)} />}
 
       {showDesktop && (
         <>
-          {/* DESKTOP ICONS */}
+          {/* Desktop icons */}
           <div className="desktop-icons">
-            <div className="icon" onDoubleClick={() => openWindow("explorer")} onClick={() => openWindow("explorer")}>
+            <div className="icon" onDoubleClick={() => openWindow("explorer")}>
               <img src="/icons/folder.png" alt="Explorer" />
               <span>File Explorer</span>
             </div>
-
-            <div className="icon" onDoubleClick={() => openWindow("recycle")} onClick={() => openWindow("recycle")}>
-              <img src="/icons/recycle.png" alt="Recycle Bin" />
-              <span>Recycle Bin</span>
-            </div>
-
-            <div className="icon" onDoubleClick={() => openWindow("terminal")} onClick={() => openWindow("terminal")}>
+            <div className="icon" onDoubleClick={() => openWindow("terminal")}>
               <img src="/icons/terminal.png" alt="Terminal" />
               <span>Terminal</span>
             </div>
+            <div className="icon" onDoubleClick={() => openWindow("recycle")}>
+              <img src="/icons/recycle.png" alt="Recycle" />
+              <span>Recycle Bin</span>
+            </div>
           </div>
 
-          {/* TASKBAR */}
-          <div className="taskbar">
-            <div className="start-area">
-              <button className="start-btn" onClick={() => setStartOpen((s) => !s)}>⊞</button>
-
-              {startOpen && (
-                <div className="start-menu">
-                  <div className="start-app" onClick={() => openWindow("explorer")}>File Explorer</div>
-                  <div className="start-app" onClick={() => openWindow("terminal")}>Terminal</div>
-                  <div className="start-app" onClick={() => openWindow("recycle")}>Recycle Bin</div>
-                  <div
-                    className="start-app"
-                    onClick={() => {
-                      setShowDesktop(false);
-                      setBooted(false);
-                      setTimeout(() => {
-                        setBooted(true);
-                        setTimeout(() => setShowDesktop(true), 900);
-                      }, 80);
-                    }}
-                  >
-                    Restart (simulated)
+          {/* Start menu */}
+          <div className={`start-menu ${startOpen ? "open" : ""}`}>
+            <div className="start-panel">
+              <div className="start-search">
+                <input
+                  placeholder="Type to search apps..."
+                  value={startQuery}
+                  onChange={(e) => setStartQuery(e.target.value)}
+                  autoFocus={startOpen}
+                />
+              </div>
+              <div className="start-list">
+                {filtered.map((a) => (
+                  <div className="start-app-row" key={a.id} onClick={() => openWindow(a.id)}>
+                    <img src={a.icon} alt={a.title} />
+                    <div className="start-app-title">{a.title}</div>
                   </div>
-                </div>
-              )}
+                ))}
+                {filtered.length === 0 && <div className="start-empty">No apps found</div>}
+              </div>
+            </div>
+          </div>
+
+          {/* Taskbar (centered) */}
+          <div className="taskbar">
+            <div className="task-left">
+              <button
+                className="start-button"
+                onClick={() => {
+                  setStartOpen((s) => !s);
+                  setStartQuery("");
+                }}
+                aria-label="Start"
+              >
+                ⊞
+              </button>
             </div>
 
-            {/* taskbar middle area: show task tiles (open windows) */}
-            <div className="taskbar-tiles">
+            <div className="task-center">
               {openWindows.map((w) => (
                 <button
                   key={w}
-                  className={`task-tile ${minimized.includes(w) ? "minimized" : ""}`}
-                  onClick={() => {
-                    if (minimized.includes(w)) restoreFromTaskbar(w);
-                    else {
-                      bringToFront(refs[w]);
-                    }
-                  }}
+                  className={`task-item ${minimized.includes(w) ? "min" : ""}`}
+                  onClick={() => (minimized.includes(w) ? restoreFromTaskbar(w) : bringToFront(refs[w]))}
                 >
                   {w}
                 </button>
               ))}
             </div>
 
-            <div className="taskbar-time">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+            <div className="task-right">
+              <button className="icon-btn" title="Toggle fullscreen" onClick={toggleFullscreen}>
+                {isFull ? "🡼" : "⤢"}
+              </button>
+              <div className="clock">{timeStr}</div>
+            </div>
           </div>
 
-          {/* EXPLORER WINDOW */}
+          {/* Explorer Window */}
           {openWindows.includes("explorer") && !minimized.includes("explorer") && (
             <div
-              className="window explorer"
+              className="window window-explorer"
               ref={refs.explorer}
-              style={{ left: "220px", top: "140px", zIndex: 60 }}
+              style={{ left: 180 + Math.random() * 30, top: 140 + Math.random() * 30 }}
               onMouseDown={() => bringToFront(refs.explorer)}
             >
               <div className="window-title-bar">
                 <span>File Explorer</span>
-                <div className="window-title-bar-buttons">
-                  <button className="min-btn" onClick={() => minimizeWindow("explorer")}>_</button>
-                  <button className="max-btn" onClick={() => toggleMaximize("explorer")}>▢</button>
-                  <button className="close-btn" onClick={() => closeWindow("explorer")}>×</button>
+                <div className="window-controls">
+                  <button onClick={() => minimizeWindow("explorer")}>_</button>
+                  <button onClick={() => toggleMaximize("explorer")}>▢</button>
+                  <button onClick={() => closeWindow("explorer")}>×</button>
                 </div>
               </div>
 
               <div className="window-body">
                 <h3>My Files</h3>
                 <div className="file-list">
-                  {files.length === 0 && <div className="muted">No files — create one to test.</div>}
+                  {files.length === 0 && <div className="muted">No files — create or upload one.</div>}
                   {files.map((f) => (
-                    <div key={f.id} className="file-row">
+                    <div className="file-row" key={f.id}>
                       <div className="file-meta">
                         <img src="/icons/file.png" alt="file" />
                         <div>
@@ -494,29 +529,29 @@ export default function Computer() {
             </div>
           )}
 
-          {/* RECYCLE WINDOW */}
+          {/* Recycle window */}
           {openWindows.includes("recycle") && !minimized.includes("recycle") && (
             <div
-              className="window recycle"
+              className="window window-recycle"
               ref={refs.recycle}
-              style={{ left: "300px", top: "180px", zIndex: 60 }}
+              style={{ left: 260 + Math.random() * 20, top: 200 + Math.random() * 20 }}
               onMouseDown={() => bringToFront(refs.recycle)}
             >
               <div className="window-title-bar">
                 <span>Recycle Bin</span>
-                <div className="window-title-bar-buttons">
-                  <button className="min-btn" onClick={() => minimizeWindow("recycle")}>_</button>
-                  <button className="max-btn" onClick={() => toggleMaximize("recycle")}>▢</button>
-                  <button className="close-btn" onClick={() => closeWindow("recycle")}>×</button>
+                <div className="window-controls">
+                  <button onClick={() => minimizeWindow("recycle")}>_</button>
+                  <button onClick={() => toggleMaximize("recycle")}>▢</button>
+                  <button onClick={() => closeWindow("recycle")}>×</button>
                 </div>
               </div>
 
               <div className="window-body">
                 <h3>Recycle Bin</h3>
                 <div className="file-list">
-                  {recycle.length === 0 && <div className="muted">Recycle Bin empty</div>}
+                  {recycle.length === 0 && <div className="muted">Recycle bin is empty</div>}
                   {recycle.map((r) => (
-                    <div key={r.id} className="file-row">
+                    <div className="file-row" key={r.id}>
                       <div className="file-meta">
                         <img src="/icons/file.png" alt="file" />
                         <div>
@@ -526,7 +561,9 @@ export default function Computer() {
                       </div>
                       <div className="file-actions">
                         <button onClick={() => restoreFile(r.id)}>Restore</button>
-                        <button onClick={() => setRecycle((p) => p.filter((x) => x.id !== r.id))}>Delete Permanently</button>
+                        <button onClick={() => setRecycle((p) => p.filter((x) => x.id !== r.id))}>
+                          Delete Permanently
+                        </button>
                       </div>
                     </div>
                   ))}
@@ -534,34 +571,36 @@ export default function Computer() {
 
                 {recycle.length > 0 && (
                   <div className="recycle-controls">
-                    <button onClick={emptyRecycle}>Empty Recycle Bin</button>
+                    <button onClick={emptyBin}>Empty Recycle Bin</button>
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* TERMINAL WINDOW */}
+          {/* Terminal window */}
           {openWindows.includes("terminal") && !minimized.includes("terminal") && (
             <div
-              className="window terminal"
+              className="window window-terminal"
               ref={refs.terminal}
-              style={{ left: "380px", top: "210px", zIndex: 60 }}
+              style={{ left: 340 + Math.random() * 20, top: 220 + Math.random() * 20 }}
               onMouseDown={() => bringToFront(refs.terminal)}
             >
               <div className="window-title-bar">
                 <span>OS Terminal</span>
-                <div className="window-title-bar-buttons">
-                  <button className="min-btn" onClick={() => minimizeWindow("terminal")}>_</button>
-                  <button className="max-btn" onClick={() => toggleMaximize("terminal")}>▢</button>
-                  <button className="close-btn" onClick={() => closeWindow("terminal")}>×</button>
+                <div className="window-controls">
+                  <button onClick={() => minimizeWindow("terminal")}>_</button>
+                  <button onClick={() => toggleMaximize("terminal")}>▢</button>
+                  <button onClick={() => closeWindow("terminal")}>×</button>
                 </div>
               </div>
 
               <div className="window-body terminal-body">
-                <div className="terminal-logs">
-                  {terminalLogs.map((line, i) => (
-                    <div key={i}>{line}</div>
+                <div className="terminal-output">
+                  {termLogs.map((l, i) => (
+                    <div key={i} className="term-line">
+                      {l}
+                    </div>
                   ))}
                 </div>
 
@@ -569,35 +608,17 @@ export default function Computer() {
                   <span className="prompt">user@fakeos:~$</span>
                   <input
                     className="terminal-input"
-                    value={terminalInput}
-                    onChange={(e) => setTerminalInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") runTerminalCommand();
-                      if (e.key === "ArrowUp") {
-                        // simple history could be implemented — placeholder
-                      }
-                    }}
-                    autoFocus
+                    value={termInput}
+                    onChange={(e) => setTermInput(e.target.value)}
+                    onKeyDown={onTermKey}
+                    placeholder="Type a command and press Enter"
                   />
                 </div>
               </div>
             </div>
           )}
-
-          {/* Hidden ghost windows kept for DOM references if minimized */}
-          {["explorer", "recycle", "terminal"].map((name) => {
-            if (!openWindows.includes(name)) return null;
-            return (
-              <div
-                key={"ghost-" + name}
-                className={`window ghost ${minimized.includes(name) ? "hidden" : ""}`}
-                ref={refs[name]}
-                style={{ left: "-9999px", top: "-9999px", width: "520px", display: "none" }}
-              />
-            );
-          })}
         </>
       )}
     </div>
   );
-} // <-- end Computer()
+}
